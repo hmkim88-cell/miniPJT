@@ -16,7 +16,7 @@ from datetime import date, datetime
 
 from . import store
 
-SOURCES = {"linkedin-scan": "링크드인 (에이전트 스캔)", "greenhouse": "Greenhouse 채용 페이지", "lever": "Lever 채용 페이지",
+SOURCES = {"linkedin-excel": "링크드인 구인 엑셀", "linkedin-scan": "링크드인 (에이전트 스캔)", "greenhouse": "Greenhouse 채용 페이지", "lever": "Lever 채용 페이지",
            "ashby": "Ashby 채용 페이지", "linkedin-export": "링크드인 데이터 내보내기", "linkedin-alert": "링크드인 채용 알림"}
 _LI = re.compile(r"linkedin\.com/(?:comm/)?jobs/view/(?:[^/?#\s]*-)?(\d{6,})", re.I)
 
@@ -43,7 +43,10 @@ def normalize(item: dict, source: str) -> dict | None:
     return {"source": source, "source_name": SOURCES.get(source, source), "job_id": str(job_id)[:40], "title": title[:160],
             "company": g("company", "company_name", "Company Name", "org")[:120], "location": g("location", "loc", "Location")[:120],
             "work_type": g("work_type", "workplace", "workplaceType", "type")[:40], "posted": g("posted", "posting_age", "posted_at", "updated_at")[:40],
-            "tags": [str(t)[:40] for t in tags][:6], "alumni": int(re.sub(r"\D", "", alumni) or 0) if alumni else 0, "url": url[:400]}
+            "tags": [str(t)[:40] for t in tags][:6], "alumni": int(re.sub(r"\D", "", alumni) or 0) if alumni else 0, "url": url[:400],
+            # 엑셀처럼 칸이 더 있으면 함께 (분석 정확도 ↑)
+            "description": g("description")[:8000], "seniority": g("seniority")[:60], "salary_text": g("salary_text", "salary")[:120],
+            "employment": g("employment")[:40], "industry": g("industry")[:80], "applicants": g("applicants")[:20]}
 
 
 def ingest(items: list[dict], source: str, run_at: str | None = None) -> dict:
@@ -51,6 +54,7 @@ def ingest(items: list[dict], source: str, run_at: str | None = None) -> dict:
     today = (run_at or date.today().isoformat())[:10]
     have = {(_key(x["source"], x["job_id"])): x for x in store.load("feed")}
     new = seen = skipped = 0
+    new_ids: list[str] = []
     for raw in items[:500]:
         it = normalize(raw, source)
         if not it:
@@ -63,9 +67,9 @@ def ingest(items: list[dict], source: str, run_at: str | None = None) -> dict:
             store.save("feed", k, old); seen += 1
         else:
             rec = {**it, "key": k, "first_seen": today, "last_seen": today, "runs": 1}
-            store.save("feed", k, rec); have[k] = rec; new += 1
+            store.save("feed", k, rec); have[k] = rec; new += 1; new_ids.append(it["job_id"])
     log = {"source": source, "run_at": run_at or datetime.now().strftime("%Y-%m-%d %H:%M"), "new": new, "seen": seen, "skipped": skipped,
-           "total": new + seen}
+           "total": new + seen, "new_ids": new_ids[:500]}
     runs = [x for x in store.load("feedrun")]
     store.save("feedrun", len(runs) + 1, log)
     return log

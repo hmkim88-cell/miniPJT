@@ -167,6 +167,13 @@ class SinglePosting(Exception):
 def parse_any(filename: str, data: bytes | None, pasted: str = "") -> tuple[list[dict], str]:
     name = (filename or "").lower()
     if data:
+        if name.endswith((".xlsx", ".xlsm")):   # 사용자가 내려받은 링크드인 구인 내용 엑셀
+            from .linkedin_excel import parse_excel
+            jobs, info = parse_excel(data)
+            parse_any.last_info = info
+            return jobs, "링크드인 구인 엑셀"
+        if name.endswith(".xls"):
+            raise ValueError("예전 엑셀(.xls)은 읽을 수 없어요. 엑셀에서 '다른 이름으로 저장 → Excel 통합 문서(.xlsx)' 또는 CSV로 저장해 올려 주세요.")
         if name.endswith(".zip"):
             return parse_export_zip(data), "링크드인 데이터 내보내기 (ZIP)"
         if name.endswith(".csv"):
@@ -191,7 +198,7 @@ def parse_any(filename: str, data: bytes | None, pasted: str = "") -> tuple[list
             if len(jobs) >= 2:
                 return jobs, "링크드인 채용 PDF (알림·검색 결과)"
             raise SinglePosting(text, jobs[0]["url"] if jobs else "")
-        raise ValueError("ZIP·CSV(데이터 내보내기), .eml·.html·.txt(채용 알림 메일), PDF(채용 화면 저장)만 올릴 수 있어요.")
+        raise ValueError("엑셀(.xlsx), ZIP·CSV(데이터 내보내기), .eml·.html·.txt(채용 알림 메일), PDF(채용 화면 저장)만 올릴 수 있어요.")
     if pasted.strip():
         t = html_to_text(pasted) if "<a " in pasted.lower() else pasted
         return parse_alert_text(t), "링크드인 채용 알림 메일 (붙여넣기)"
@@ -231,17 +238,70 @@ def fit(job: dict, fam: str, tier: str, profile: dict) -> dict:
     else:
         f_pts = 0; reasons.append(f"다른 직종 ({mine_f} ≠ {fam}) +0")
     d = abs(lj.TIERS.index(tier) - lj.TIERS.index(mine_t))
-    t_pts = 30 if d == 0 else 15 if d == 1 else 0
-    reasons.append(f"직급 {tier} · 나 {mine_t} " + ("일치 +30" if d == 0 else "한 단계 차이 +15" if d == 1 else "두 단계 이상 +0"))
+    if fam == "기타" and mine_f and mine_f != "기타":   # IT 외 직무는 직급이 맞아도 의미가 없음 → 위로 올라오지 않게
+        t_pts = 0; reasons.append("IT 외 직무라 직급 점수 없음 +0")
+    else:
+        t_pts = 30 if d == 0 else 15 if d == 1 else 0
+        reasons.append(f"직급 {tier} · 나 {mine_t} " + ("일치 +30" if d == 0 else "한 단계 차이 +15" if d == 1 else "두 단계 이상 +0"))
     skills = [s for s in (profile.get("skills") or []) if s]
-    title = job.get("title", "")
-    hits = [s for s in skills if re.search(r"(?<![A-Za-z0-9])" + re.escape(s) + r"(?![A-Za-z0-9])", title, re.I)]
-    if hits:
+    title, desc = job.get("title", ""), job.get("description") or ""
+    has = lambda s, t: re.search(r"(?<![A-Za-z0-9])" + re.escape(s) + r"(?![A-Za-z0-9])", t, re.I)
+    hits = [s for s in skills if has(s, title)]
+    if desc:   # 엑셀 등으로 공고 내용이 있으면: 직무명 + 공고 내용에서 내 기술 찾기 (공고 요구 기술 중 내가 가진 비율)
+        hits = list(dict.fromkeys(hits + [s for s in skills if has(s, desc)]))
+        req = job.get("_req_skills") or []
+        if req:
+            mine = [s for s in req if any(s.lower() == x.lower() for x in skills)]
+            k_pts = round(30 * len(mine) / len(req)) if mine else (10 if hits else 0)
+            reasons.append(f"공고 요구 기술 {len(req)}개 중 내 기술 {len(mine)}개" + (f" ({', '.join(mine[:3])})" if mine else "") + f" +{k_pts}")
+        else:
+            k_pts = min(30, 10 + 10 * len(hits)) if hits else 5
+            reasons.append(f"공고 내용에 내 기술 {', '.join(hits[:3])} +{k_pts}" if hits else "공고 내용에 내 기술 없음 +5")
+    elif hits:
         k_pts = min(30, 10 + 10 * len(hits)); reasons.append(f"직무명에 내 기술 {', '.join(hits[:3])} +{k_pts}")
     else:
         k_pts = 10; reasons.append("직무명에 내 기술 없음 +10 (상세 분석에서 다시 확인)")
     return {"score": f_pts + t_pts + k_pts, "parts": {"family": f_pts, "tier": t_pts, "keyword": k_pts}, "reasons": reasons,
             "my_family": mine_f, "my_tier": mine_t}
+
+
+def _skills_in(text: str) -> list[str]:
+    """공고 내용에 나온 기술 (서비스 기술 사전 기준, 나온 순서). 'go-live'의 go 같은 오검출 제외."""
+    from .jobs import ALL_SKILLS
+    hits = [(m.start(), s) for s in ALL_SKILLS
+            for m in [re.search(r"(?<![A-Za-z0-9+#.])" + re.escape(s) + r"(?![A-Za-z0-9+#]|-[A-Za-z])", text, re.I)] if m]
+    return [s for _, s in sorted(hits)]
+
+
+def _man(s: str) -> int:
+    """'1억 1,000만' → 11000 · '8,000만' → 8000 · '1.2억' → 12000 · '5천만' → 5000 (만원)."""
+    s = (s or "").replace(",", "").replace(" ", "")
+    m = re.fullmatch(r"(?:(\d+(?:\.\d+)?)억)?(?:(\d+)(천)?만)?", s)
+    if not m or not (m.group(1) or m.group(2)):
+        return 0
+    eok = float(m.group(1) or 0) * 10000
+    man = int(m.group(2) or 0) * (1000 if m.group(3) else 1)
+    return int(eok + man)
+
+
+def _salary_from(salary_text: str, desc: str) -> dict:
+    """연봉 칸 또는 공고 내용의 원화 연봉 (KRW·₩·원 → 만원, '8,000만~1억' 같은 만원 표기). 외화·없음은 빈 값 (지어내지 않음)."""
+    for t in (salary_text, desc):
+        if not t:
+            continue
+        m = re.search(r"(?:KRW|₩)\s*([\d,]{7,})\s*(?:[-~–]|to)\s*(?:KRW|₩)?\s*([\d,]{7,})", t, re.I) \
+            or re.search(r"([\d,]{7,})\s*원?\s*[-~–]\s*([\d,]{7,})\s*원", t)
+        if m:
+            lo, hi = (int(x.replace(",", "")) // 10000 for x in m.groups())
+            return {"salary_min": lo, "salary_max": hi, "salary_text": t[:120]}
+        # 한글 표기: '8,000만~1억 1,000만' · '1억~1억 5천만' · '9000만원 - 1.2억'
+        amt = r"((?:\d+(?:\.\d+)?\s*억\s*)?(?:[\d,]+\s*천?\s*만)?)"
+        m = re.search(amt + r"\s*원?\s*[-~–]\s*" + amt + r"\s*원?", t)
+        if m and all(re.search(r"억|만", g or "") for g in m.groups()):
+            lo, hi = _man(m.group(1)), _man(m.group(2))
+            if lo and hi and lo <= hi:
+                return {"salary_min": lo, "salary_max": hi, "salary_text": t[:120]}
+    return {"salary_text": salary_text}
 
 
 def analyze(jobs: list[dict], profile: dict) -> list[dict]:
@@ -250,13 +310,18 @@ def analyze(jobs: list[dict], profile: dict) -> list[dict]:
         return next((x for x in same if x["title"].lower() == j["title"].lower()), same[0] if same else None)
     out = []
     for j in jobs[:MAX_JOBS]:
-        fam = lj.classify_family(j["title"], j["title"])["family"]
-        tier = lj.classify_tier(j["title"], "", None)
-        sal = lj.estimate_salary({}, fam, tier["tier"], JOBS)
-        f = fit(j, fam, tier["tier"], profile)
-        iv = lj.interview_keywords(fam, j["title"], [])[:3]
+        desc = j.get("description") or ""
+        body = j["title"] + "\n" + desc
+        fam = lj.classify_family(j["title"], body)["family"]
+        # 직급: 엑셀의 '직급(Seniority level)' 칸 → 직무명 → 공고 내용의 '5+ years' 순
+        tier = lj.classify_tier(j["title"], (j.get("seniority") or "") + "\n" + desc, None)
+        req = _skills_in(desc)[:8] if desc else []
+        jj = {**j, "_req_skills": req}
+        sal = lj.estimate_salary(_salary_from(j.get("salary_text") or "", desc), fam, tier["tier"], JOBS)
+        f = fit(jj, fam, tier["tier"], profile)
+        iv = lj.interview_keywords(fam, body, req)[:4 if req else 3]
         svc = svc_job(j)
-        out.append({**j, "family": fam, "tier": tier["tier"], "tier_why": tier["why"],
+        out.append({**j, "description": desc[:600], "family": fam, "tier": tier["tier"], "tier_why": tier["why"], "req_skills": req,
                     "salary": {"min": sal["min"], "max": sal["max"], "kind": sal["kind"], "n": sal["n"]},
                     "fit": f, "interview": [{"keyword": x["keyword"], "prep": x["prep"]} for x in iv],
                     "service_job_id": svc["id"] if svc else None})

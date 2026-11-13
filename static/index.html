@@ -7,7 +7,7 @@
   <link rel="stylesheet" href="https://cdn.jsdelivr.net/gh/orioncactus/pretendard@v1.3.9/dist/web/static/pretendard.min.css">
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link href="https://fonts.googleapis.com/css2?family=Noto+Serif+KR:wght@500;700;900&display=swap" rel="stylesheet">
-  <link rel="stylesheet" href="/static/style.css?v=20261113a">
+  <link rel="stylesheet" href="/static/style.css?v=20261113f">
 </head>
 <body>
 <div class="shell">
@@ -174,17 +174,23 @@
           <p class="lead">관심 있는 링크드인 공고를 붙여넣으면 <b>직종</b>(세일즈·개발·딜리버리 …) · <b>직급</b>(일반·주니어·시니어·리더) · <b>예상 연봉</b> · <b>인터뷰에서 가장 중요한 키워드</b>를 바로 알려 드려요.</p></div>
         <div class="ls-acct" id="lsAcct"></div>
       </header>
-      <nav class="ls-tabs four" role="tablist">
-        <button class="on star" data-lstab="co" role="tab"><b>★ 구인 회사 분석</b><small>링크드인 공고 → 회사별 채용 규모 · 신호 · 나와의 적합</small></button>
+      <nav class="ls-tabs five" role="tablist">
+        <button class="on dashtab" data-lstab="dash" role="tab"><b>📊 채용 대시보드</b><small>엑셀·배치로 쌓인 링크드인 공고를 차트로 한눈에</small></button>
+        <button class="star" data-lstab="co" role="tab"><b>★ 구인 회사 분석</b><small>링크드인 공고 → 회사별 채용 규모 · 신호 · 나와의 적합</small></button>
         <button data-lstab="feed" role="tab"><b>⓪ 오늘의 새 공고</b><small>매일 정해진 시각 배치 → 새 공고 · 나와 맞는 순위</small></button>
         <button data-lstab="import" role="tab"><b>① 내 링크드인 공고 가져오기</b><small>저장한 공고 · 지원한 공고 · 채용 알림 → 나와 맞는 회사 순위</small></button>
         <button data-lstab="one" role="tab"><b>② 공고 1개 자세히 분석</b><small>공고 글 붙여넣기 → 직종·직급·연봉·인터뷰 키워드</small></button>
       </nav>
-      <div id="lsCoPane"></div>
+      <div id="lsDashPane"></div>
+      <div id="lsCoPane" hidden></div>
       <div id="lsFeedPane" hidden></div>
       <div id="lsImportPane" hidden>
         <div class="ls-srcs">
-          <section class="ls-src"><span class="ls-src-n">A</span><h4>링크드인 데이터 내보내기 <em>추천</em></h4>
+          <section class="ls-src xl"><span class="ls-src-n">X</span><h4>링크드인 구인 엑셀 <em>추천</em></h4>
+            <p>내려받은 <b>구인 내용 엑셀(.xlsx)</b>을 올리면 공고 내용까지 읽어 분석하고, <b>올릴 때마다 쌓여서</b> 새 공고(NEW)를 구분해요.</p>
+            <ol><li>링크드인 구인 내용을 엑셀로 내려받기</li><li>첫 줄에 열 이름: 직무명(Job Title) · 회사 · 근무지 · 직급 · 연봉 · 공고 링크 · 공고 내용</li><li>아래에 올리기 → 📊 채용 대시보드에 바로 반영</li></ol>
+            <a href="/api/linkedin/excel-template">엑셀 양식 받기 (열 이름 맞추기) ↓</a></section>
+          <section class="ls-src"><span class="ls-src-n">A</span><h4>링크드인 데이터 내보내기</h4>
             <p>링크드인에서 <b>저장한 공고</b>와 <b>지원한 공고</b>를 한 번에 가져와요.</p>
             <ol><li>링크드인 <b>설정 및 개인정보</b> → <b>데이터 개인정보</b></li><li><b>내 데이터 사본 받기</b> → '채용 공고(Jobs)' 선택 → 요청</li><li>메일로 온 <b>ZIP</b>(또는 Saved Jobs.csv · Job Applications.csv)을 아래에 올리기</li></ol>
             <a href="https://www.linkedin.com/mypreferences/d/download-my-data" target="_blank" rel="noopener">링크드인 데이터 받기 페이지 ↗</a></section>
@@ -198,9 +204,9 @@
             <span class="muted">키가 준비되면 연결해 드려요 (지금은 A·B로)</span></section>
         </div>
         <div class="card ls-imp-card">
-          <label class="drop ls-drop" id="lsDrop" tabindex="0"><b>ZIP · CSV · PDF · .eml 파일을 끌어다 놓거나 <u>파일 선택</u></b>
-            <small>링크드인 데이터 내보내기(ZIP·CSV) · 채용 알림 메일(.eml·.html) · <b>채용 화면을 PDF로 저장한 파일</b>(알림 메일·검색 결과·공고 1개) · 25MB까지 · 파일은 저장하지 않아요</small><span class="drop-file" id="lsDropFile"></span></label>
-          <input type="file" id="lsFile" accept=".zip,.csv,.pdf,.eml,.html,.htm,.txt" hidden>
+          <label class="drop ls-drop" id="lsDrop" tabindex="0"><b>엑셀 · ZIP · CSV · PDF · .eml 파일을 끌어다 놓거나 <u>파일 선택</u></b>
+            <small><b>링크드인 구인 엑셀(.xlsx)</b> · 링크드인 데이터 내보내기(ZIP·CSV) · 채용 알림 메일(.eml·.html) · <b>채용 화면을 PDF로 저장한 파일</b>(알림 메일·검색 결과·공고 1개) · 25MB까지 · 파일은 저장하지 않아요</small><span class="drop-file" id="lsDropFile"></span></label>
+          <input type="file" id="lsFile" accept=".xlsx,.xlsm,.xls,.zip,.csv,.pdf,.eml,.html,.htm,.txt" hidden>
           <div class="ru-or"><span>또는 채용 알림 메일 내용 붙여넣기</span><button type="button" class="link-btn" id="lsImpSample">예시 데이터로 해 보기</button></div>
           <textarea id="lsMail" rows="4" placeholder="링크드인 채용 알림 메일을 전체 선택(Ctrl+A) → 복사 → 여기에 붙여넣기"></textarea>
           <div class="ls-act"><small class="muted">링크드인이 본인에게 주는 데이터만 써요 — 서버는 링크드인에 접속하지 않아요.</small>
@@ -283,6 +289,6 @@
 </div>
 <div class="toast" id="toast"></div>
 
-<script src="/static/app.js?v=20261113a"></script>
+<script src="/static/app.js?v=20261113f"></script>
 </body>
 </html>

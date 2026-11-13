@@ -127,3 +127,7 @@ mini-pjt/
 - 링크드인 직종·직급 규칙(`linkedin_jobs.TITLE_RULES` · `classify_tier`)을 바꾸면 **`python tests\test_linkedin_matching.py`가 OK 81/81** 이어야 함. 새로 틀린 직무명을 발견하면 정답과 함께 이 파일에 추가
 
 - 링크드인 채용 PDF: 직무명↔링크는 PDF 링크 영역 위치로 짝지음(`pdf_text_with_links`). 점검 `pdf_job_test.py`(알림 4 · 검색 3 · 1개 → 자세히 분석 · 깨진 PDF 400)
+- 링크드인 구인 엑셀: `linkedin_excel.ALIASES`에 열 이름을 추가해 확장(영어·한글). 점검 `excel_test.py`(영어/한글 머리글 · 3번째 줄 머리글 · 2회 올리기 NEW · 한글 연봉 '억' · .xls 안내)
+- 📊 대시보드 CSS 클래스는 `ld-` 접두사, 탭은 `dashtab` (회사 대시보드 창의 `.dash`와 겹치지 않게). 직종 색은 `--fam-0..7`만 사용
+- 패키지: openpyxl 추가 (requirements.txt)
+

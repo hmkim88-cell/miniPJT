@@ -306,6 +306,7 @@
 | 직종 · 인터뷰 | `GET /api/families` · `GET /api/jobs?family=` · `POST /api/recent-focus` |
 | 구인 회사 분석 | `POST /api/companies` {profile, saju?, days, imported[]} → 회사별 채용 규모·신호·적합도 |
 | 내 링크드인 공고 가져오기 | `POST /api/linkedin/import` (file: ZIP·CSV·.eml·.html / text: 알림 메일 붙여넣기, profile) → 나와 맞는 회사 순위 |
+| 구인 엑셀 · 대시보드 | `POST /api/linkedin/import`(.xlsx) · `GET /api/linkedin/excel-template` · `POST /api/li-dashboard` |
 | 공고 파일 → 글 | ② 탭 "공고 파일 올리기"(PDF·Word·txt) → `POST /api/resume/extract` 응답의 `job_urls`로 공고 주소도 채움 |
 | 링크드인 공고 분석 | `POST /api/linkedin/analyze` {url?, text, profile?} → 직종·직급·예상 연봉·인터뷰 키워드·내 레주메 비교 |
 
@@ -402,6 +403,25 @@
 - 직급: 직무명 · 링크드인 표시 → 없으면 **'5년 이상' · '5+ years' · '3~7년'**을 읽어 판단, Country/General Manager · Head · 실장 = 리더
 - 인터뷰 키워드: 세일즈 중 **파트너십·제휴·채널 직무는 전용 키워드**(파트너 생태계 구축 · 파트너 소싱 매출 · 공동 판매 · 계약·협상 · SI·리셀러 관리)
 - 회귀 시험: `tests/test_linkedin_matching.py` (81개, 규칙 바꾼 뒤 꼭 실행 → `OK 81/81`)
+
+### 14-3-4. 링크드인 구인 엑셀 올리기 (`app/linkedin_excel.py`) · 📊 채용 대시보드 (`app/li_dashboard.py`)
+
+**엑셀 올리기** — ① 내 링크드인 공고 가져오기에 `.xlsx` 올리기 (예전 `.xls`는 .xlsx·CSV로 다시 저장 안내)
+
+| 항목 | 내용 |
+|---|---|
+| 열 이름 | 영어·한글 모두, 순서 상관없음: 직무명(Job Title·Title·Position) · 회사(Company) · 근무지(Location) · 근무 형태(Workplace Type) · 고용 형태 · **직급(Seniority Level)** · 게시일 · 공고 링크(Job URL) · **연봉(Salary)** · 지원자 · 산업 · **공고 내용(Description)** · 공고 번호 |
+| 머리글 | 모든 시트에서 위쪽 15줄 안의 '직무명'이 있는 줄을 자동으로 찾음. 직무명 없는 줄·같은 공고는 건너뜀 (최대 2,000줄) |
+| 분석 | 공고 내용이 있으면 직종(본문 키워드)·직급(직급 칸 → 직무명 → '5+ years')·**요구 기술**(공고 내용에서 나온 순서)·연봉(연봉 칸/공고 내용의 KRW·₩·'8,000만~1억 1,000만'·'1.2억'·'5천만')·인터뷰 키워드까지. 적합도의 기술 점수 = 공고 요구 기술 중 내 기술 비율 × 30. IT 외 직무(기타)는 직급 점수 없음 |
+| 쌓기 | 올릴 때마다 피드(kind=feed, 출처 '링크드인 구인 엑셀')에 저장 → 이미 본 공고/새 공고(NEW) 구분, ★ 구인 회사 분석·📊 대시보드에 반영 |
+| 양식 | "엑셀 양식 받기" `GET /api/linkedin/excel-template` (열 이름 + 가상 예시 1줄) |
+
+**📊 채용 대시보드** — 링크드인 공고 분석의 첫 탭 (`POST /api/li-dashboard` {profile, days 7/14/30})
+- KPI: 나와 가장 잘 맞는 공고(적합도) · 쌓인 공고(NEW) · 내 직종 공고 비율 · 적합도 70↑ · 내 직종 예상 연봉 중간값 vs 내 기대 연봉
+- 차트: 직종별 공고(가로 막대 + NEW 부분) · 직급 분포(전체 vs 내 직종) · 인터뷰 핵심 키워드(내 직종, 크기 = 빈도) · 채용 많은 회사 Top 10(직종 구성 누적 막대) · 나와 맞는 공고 Top 6(적합도 3요소 막대) · 직종별 예상 연봉(최저~최고 범위 + 중간값 점 + 내 기대 연봉 세로선) · 날짜별 새 공고 · 근무 형태·출처
+- 표로 보기(모든 값), 막대에 마우스를 올리면 값, 키보드 Tab으로 이동
+- 직종 색 7개 + 기타 회색은 색약 검증 통과 팔레트(#eb6834 · #1baf7a · #2a78d6 · #eda100 · #6250d6 · #e87ba4 · #8a6d00), 앱 전체 직종 배지와 같은 색
+- 시험값(가상 26개, 세일즈 9년): 1위 Enterprise Account Executive 100점, 내 직종 46%, 세일즈 연봉 중간 12,800만
 
 ## 15. 구인자 공고 등록 (화면)
 

@@ -69,7 +69,7 @@ function go(name) {
   if (name === "recruiter") renderRecruiter();
   if (name === "overview") renderOverview();
   if (name === "resume") { renderRuSide(); renderRuResult(); }
-  if (name === "liscan") { renderLsAcct(); if (!$("#lsFeedPane").hidden) loadFeed(); if (!$("#lsCoPane").hidden) loadCompanies(); }
+  if (name === "liscan") { renderLsAcct(); if (!$("#lsFeedPane").hidden) loadFeed(); if (!$("#lsCoPane").hidden) loadCompanies(); if (!$("#lsDashPane").hidden) loadLiDash(); }
   window.scrollTo({ top: 0, behavior: "smooth" });
 }
 function unlock(...names) { names.forEach((n) => { const b = $(`.step[data-go="${n}"]`); b.disabled = false; }); }
@@ -1889,7 +1889,8 @@ $("#linkedinUrl").addEventListener("blur", checkLiUrl);
 state.lsFile = null; state.lsImp = null; state.lsImpFam = "";
 function lsTab(t) {
   $$("[data-lstab]").forEach((b) => b.classList.toggle("on", b.dataset.lstab === t));
-  $("#lsImportPane").hidden = t !== "import"; $("#lsOnePane").hidden = t !== "one"; $("#lsFeedPane").hidden = t !== "feed"; $("#lsCoPane").hidden = t !== "co";
+  $("#lsImportPane").hidden = t !== "import"; $("#lsOnePane").hidden = t !== "one"; $("#lsFeedPane").hidden = t !== "feed"; $("#lsCoPane").hidden = t !== "co"; $("#lsDashPane").hidden = t !== "dash";
+  if (t === "dash") loadLiDash();
   if (t === "feed") loadFeed();
   if (t === "co") loadCompanies();
 }
@@ -1955,10 +1956,16 @@ $("#lsImpGo").addEventListener("click", async () => {
       setTimeout(() => $("#lsGo").click(), 0); return;   // 가져오기의 로딩 표시가 끝난 뒤 분석 시작
     }
     state.lsImp = d; state.lsImpFam = ""; renderLsImp();
+    if (d.excel) {
+      const inf = d.excel.info?.sheets?.[0];
+      $("#lsImpResult").insertAdjacentHTML("afterbegin", `<div class="xl-note"><b>엑셀 ${d.count}개 공고를 읽고 쌓았어요</b>
+        <span>새 공고 <b>${d.excel.new}</b> · 이미 본 공고 ${d.excel.seen}${inf ? ` · 시트 '${esc(inf.sheet)}' ${inf.header_row}번째 줄 머리글` : ""}${inf && inf.missing.length ? ` · 없는 열: ${inf.missing.map(esc).join(", ")}` : ""}</span>
+        <button class="btn-primary sm" data-lstab="dash">📊 채용 대시보드 보기 →</button></div>`);
+    }
     $("#lsImpResult").scrollIntoView({ behavior: "smooth", block: "start" });
   } catch (err) { toast(err.message, true); } finally { loading(false); }
 });
-const KIND = { saved: ["저장", "s"], applied: ["지원함", "a"], alert: ["알림", "n"] };
+const KIND = { saved: ["저장", "s"], applied: ["지원함", "a"], alert: ["알림", "n"], excel: ["엑셀", "x"], feed: ["배치", "n"] };
 function renderLsImp() {
   const d = state.lsImp; if (!d) return;
   const sm = d.summary, list = d.jobs.filter((j) => !state.lsImpFam || j.family === state.lsImpFam);
@@ -2180,4 +2187,110 @@ $("#lsOneFile").addEventListener("change", async (e) => {
     $("#lsOneFileName").innerHTML = `📄 <b>${esc(d.filename)}</b> · ${d.type}${d.pages ? ` ${d.pages}쪽` : ""} · ${d.chars.toLocaleString()}자${d.job_urls?.length ? " · 공고 주소 찾음" : ""}`;
     toast("공고 파일을 읽었어요. '공고 분석하기'를 누르세요.");
   } catch (err) { toast(err.message, true); } finally { loading(false); e.target.value = ""; }
+});
+
+
+// ═══ 📊 링크드인 채용 대시보드 (엑셀·배치로 쌓인 공고 → 차트) ═══
+const DFAMS = ["개발", "데이터·AI", "인프라·클라우드", "세일즈", "프리세일즈", "딜리버리", "고객 성공", "기타"];
+const fcol = (f) => `var(--fam-${Math.max(0, DFAMS.indexOf(f))})`;
+state.ldDays = 30; state.ldTable = false;
+async function loadLiDash() {
+  const pane = $("#lsDashPane");
+  if (!state.ld) pane.innerHTML = `<div class="dash-loading"><span class="spin"></span>링크드인 공고를 모아 대시보드를 그리고 있어요...</div>`;
+  else pane.style.opacity = .5;
+  const p = feedProfile(); p.expected_salary = Number($("#expSalary").value) || null;
+  try { state.ld = await api("/api/li-dashboard", { profile: p, days: state.ldDays, imported: state.lsImp?.jobs || [] }); renderLiDash(); }
+  catch (err) { pane.innerHTML = `<div class="empty">${esc(err.message)}</div>`; }
+  pane.style.opacity = 1;
+}
+const ldCard = (title, sub, body, cls = "", legend = "") => `<section class="ld-card ${cls}"><header><h4>${title}</h4>${sub ? `<p>${sub}</p>` : ""}</header>${legend}${body}</section>`;
+const famLegend = (fams) => `<div class="ld-legend">${fams.map((f) => `<span><i style="background:${fcol(f)}"></i>${esc(f)}</span>`).join("")}</div>`;
+function renderLiDash() {
+  const d = state.ld, pane = $("#lsDashPane");
+  if (d.empty) {
+    pane.innerHTML = `<section class="li-rank"><div class="empty"><b>대시보드에 쓸 링크드인 공고가 아직 없어요</b>
+      <span>① 내 링크드인 공고 가져오기에서 <b>링크드인 구인 엑셀(.xlsx)</b>을 올리면 여기 차트로 바로 보여요. 올릴 때마다 쌓여요.</span>
+      <div class="co-empty-btns"><button class="btn-primary" data-lstab="import">엑셀 올리러 가기 →</button><a class="btn-ghost" href="/api/linkedin/excel-template">엑셀 양식 받기 ↓</a></div></div></section>`;
+    return;
+  }
+  const k = d.kpi, best = k.best;
+  const maxFam = Math.max(...d.families.map((f) => f.n), 1);
+  const maxTier = Math.max(...d.tiers.map((t) => t.n), 1);
+  const maxCo = Math.max(...d.companies.map((c) => c.n), 1);
+  const salMin = Math.min(...d.salary.map((x) => x.lo), k.want || Infinity), salMax = Math.max(...d.salary.map((x) => x.hi), k.want || 0);
+  const lo0 = Math.floor(salMin / 2000) * 2000, hi0 = Math.ceil(salMax / 2000) * 2000, sx = (v) => (100 * (v - lo0)) / Math.max(1, hi0 - lo0);
+  const ticks = []; for (let v = lo0; v <= hi0; v += hi0 - lo0 > 10000 ? 4000 : 2000) ticks.push(v);
+  const maxDay = Math.max(...d.daily.map((x) => x.n), 1);
+  const maxKw = Math.max(...d.keywords.map((x) => x.n), 1);
+  const famsInCos = DFAMS.filter((f) => d.companies.some((c) => c.families[f]));
+  pane.innerHTML = `
+  <section class="ld">
+    <div class="ld-bar">
+      <div><p class="ls-k">📊 링크드인 채용 대시보드</p><h2>링크드인 공고 ${k.jobs}개 · 회사 ${k.companies}곳</h2>
+        <p class="muted">${d.last_run ? `마지막으로 쌓인 때 ${esc(d.last_run.run_at)} (${esc(d.last_run.source)}) · ` : ""}${k.my_family ? `내 직종 <b>${esc(k.my_family)}</b> 기준` : "1단계에서 희망 직종을 고르면 내 기준으로 보여요"}</p></div>
+      <div class="ld-ctrl">
+        <div class="m-sort" role="group" aria-label="기간">${[7, 14, 30].map((n) => `<button data-lddays="${n}" class="${state.ldDays === n ? "on" : ""}">${n}일</button>`).join("")}</div>
+        <button class="btn-ghost sm" id="ldTable">${state.ldTable ? "차트로 보기" : "표로 보기"}</button>
+        <button class="btn-ghost sm" data-lstab="import">엑셀 올리기 ↑</button>
+      </div>
+    </div>
+
+    <div class="ld-kpis">
+      ${best ? `<div class="ld-hero"><small>나와 가장 잘 맞는 공고</small><b>${esc(best.title)}</b><span>${esc(best.company)} · ${esc(best.family)} · ${esc(best.tier)}</span><em>${best.score}<small>/100</small></em></div>` : ""}
+      <div class="ld-kpi"><small>쌓인 공고</small><b>${k.jobs}</b><span>NEW <b class="fd-new">${k.new}</b></span></div>
+      <div class="ld-kpi"><small>내 직종 공고</small><b>${k.mine_pct != null ? `${k.mine_pct}<small>%</small>` : "-"}</b><span>${k.my_family ? `${esc(k.my_family)} ${k.mine}개` : "직종 미정"}</span></div>
+      <div class="ld-kpi"><small>적합도 70점 이상</small><b>${k.good}</b><span>먼저 볼 공고</span></div>
+      <div class="ld-kpi"><small>내 직종 예상 연봉 (중간)</small><b>${k.mine_salary_mid ? won(k.mine_salary_mid) : "-"}<small>${k.mine_salary_mid ? "만" : ""}</small></b><span>${k.want && k.mine_salary_mid ? `내 기대 ${won(k.want)}만 ${k.want <= k.mine_salary_mid ? "· 범위 안" : "· 높은 편"}` : "기대 연봉을 넣으면 비교"}</span></div>
+    </div>
+
+    ${state.ldTable ? ldCard("모든 공고 (표)", "적합도 순 · 차트의 모든 값을 여기서 확인할 수 있어요", `<div class="ld-tablewrap"><table class="table ld-table"><thead><tr><th>#</th><th>직무명</th><th>회사</th><th>직종</th><th>직급</th><th>적합도</th><th>예상 연봉(만)</th><th>근무 형태</th><th>NEW</th><th>원문</th></tr></thead>
+      <tbody>${d.table.map((r) => `<tr><td>${r.rank}</td><td><b>${esc(r.title)}</b></td><td>${esc(r.company)}</td><td>${famBadge({ family: r.family })}</td><td>${esc(r.tier)}</td><td><b>${r.fit}</b></td><td>${esc(r.sal)}</td><td>${esc(r.work_type || "-")}</td><td>${r.new ? `<span class="fd-badge">NEW</span>` : ""}</td><td>${r.url ? `<a href="${esc(r.url)}" target="_blank" rel="noopener">↗</a>` : ""}</td></tr>`).join("")}</tbody></table></div>`, "wide") : `
+    <div class="ld-grid">
+      ${ldCard("직종별 공고", "막대 = 공고 수 · 옅은 칸 = 그중 NEW", `<div class="ld-hbars">${d.families.map((f) => `
+        <div class="ld-hrow ${f.mine ? "mine" : ""}" data-tip="${esc(`<b>${f.family}</b><div class='tt-row'>공고<b>${f.n}</b></div><div class='tt-row'>NEW<b>${f.new}</b></div><div class='tt-row'>평균 적합도<b>${f.avg_fit}</b></div>`)}" tabindex="0">
+          <span class="ld-lab">${esc(f.family)}${f.mine ? ` <em>내 직종</em>` : ""}</span>
+          <span class="ld-track"><i style="width:${(100 * f.n) / maxFam}%;background:${fcol(f.family)}"><u style="width:${(100 * f.new) / Math.max(1, f.n)}%"></u></i></span>
+          <b class="ld-val">${f.n}</b></div>`).join("")}</div>`)}
+      ${ldCard("직급 분포", "일반 · 주니어 · 시니어 · 리더", `<div class="ld-cols">${d.tiers.map((t) => `
+        <div class="ld-col" data-tip="${esc(`<b>${t.tier}</b><div class='tt-row'>전체<b>${t.n}</b></div>${k.my_family ? `<div class='tt-row'>${k.my_family}<b>${t.mine_family}</b></div>` : ""}`)}" tabindex="0">
+          <b class="ld-val">${t.n}</b><span class="ld-ctrack"><i style="height:${(100 * t.n) / maxTier}%"></i>${k.my_family ? `<i class="m" style="height:${(100 * t.mine_family) / maxTier}%"></i>` : ""}</span><span class="ld-lab">${t.tier}</span></div>`).join("")}</div>`,
+        "", k.my_family ? `<div class="ld-legend"><span><i class="lg-all"></i>전체</span><span><i class="lg-mine"></i>내 직종 (${esc(k.my_family)})</span></div>` : "")}
+      ${ldCard(`인터뷰 핵심 키워드${k.my_family ? ` — ${esc(k.my_family)}` : ""}`, "공고에서 많이 나온 순 · 숫자 = 공고 수", `<div class="ld-kw">${d.keywords.map((x) => `<span style="--w:${0.75 + (0.55 * x.n) / maxKw}"><b>${esc(x.keyword)}</b><small>${x.n}</small></span>`).join("") || `<p class="muted">키워드가 아직 없어요</p>`}</div>`)}
+      ${ldCard("채용 많은 회사 Top 10", "막대 = 회사의 공고 수 · 색 = 직종 구성", `<div class="ld-hbars">${d.companies.map((c) => `
+        <div class="ld-hrow" data-tip="${esc(`<b>${c.company}</b>${Object.entries(c.families).map(([f, n]) => `<div class='tt-row'>${f}<b>${n}</b></div>`).join("")}<div class='tt-row tt-total'>회사 적합도<b>${c.score}</b></div>`)}" tabindex="0">
+          <span class="ld-lab">${esc(c.company)}${c.new ? ` <span class="fd-badge">NEW ${c.new}</span>` : ""}</span>
+          <span class="ld-track"><span class="ld-stack" style="width:${(100 * c.n) / maxCo}%">${DFAMS.filter((f) => c.families[f]).map((f) => `<i style="flex:${c.families[f]};background:${fcol(f)}"></i>`).join("")}</span></span>
+          <b class="ld-val">${c.n}</b></div>`).join("")}</div>`, "wide2", famLegend(famsInCos))}
+      ${ldCard("나와 맞는 공고 Top 6", "참고 적합도 = 직종 40 + 직급 30 + 내 기술 30", `<ol class="ld-top">${d.top_jobs.slice(0, 6).map((j, i) => `
+        <li><span class="ld-rk">${i + 1}</span><div class="ld-tj"><b>${esc(j.title)}</b><small>${famBadge({ family: j.family })} ${esc(j.company)} · ${esc(j.tier)}${j.is_new ? ` <span class="fd-badge">NEW</span>` : ""}</small></div>
+          <div class="ld-fit" data-tip="${esc(`<b>${j.title}</b><div class='tt-row'>직종<b>${j.parts.family}/40</b></div><div class='tt-row'>직급<b>${j.parts.tier}/30</b></div><div class='tt-row'>내 기술<b>${j.parts.keyword}/30</b></div>`)}" tabindex="0">
+            <span class="li-bar"><i class="f" style="width:${j.parts.family}%"></i><i class="t" style="width:${j.parts.tier}%"></i><i class="k" style="width:${j.parts.keyword}%"></i></span><b>${j.score}</b></div>
+          ${j.url ? `<a href="${esc(j.url)}" target="_blank" rel="noopener" class="ld-out" title="링크드인 원문">↗</a>` : ""}</li>`).join("")}</ol>`, "",
+        `<div class="ld-legend"><span><i style="background:#0a66c2"></i>직종</span><span><i style="background:#1baf7a"></i>직급</span><span><i style="background:#eda100"></i>내 기술</span></div>`)}
+      ${ldCard("직종별 예상 연봉 (만원)", "막대 = 최저~최고 · 점 = 중간값" + (k.want ? " · 세로선 = 내 기대 연봉" : ""), `<div class="ld-sal">${d.salary.map((x) => `
+        <div class="ld-srow ${x.mine ? "mine" : ""}" data-tip="${esc(`<b>${x.family}</b><div class='tt-row'>최저<b>${won(x.lo)}</b></div><div class='tt-row'>중간<b>${won(x.mid)}</b></div><div class='tt-row'>최고<b>${won(x.hi)}</b></div><div class='tt-row'>공고<b>${x.n} (연봉 적힘 ${x.posted})</b></div>`)}" tabindex="0">
+          <span class="ld-lab">${esc(x.family)}</span>
+          <span class="ld-strack"><i style="left:${sx(x.lo)}%;width:${sx(x.hi) - sx(x.lo)}%;background:${fcol(x.family)}"></i><em style="left:${sx(x.mid)}%"></em>${k.want ? `<s style="left:${sx(k.want)}%"></s>` : ""}</span>
+          <b class="ld-val">${won(x.mid)}</b></div>`).join("")}
+        <div class="ld-axis">${ticks.map((v) => `<span style="left:${sx(v)}%">${won(v)}</span>`).join("")}</div></div>
+        <p class="muted ld-note">공고에 원화 연봉이 없으면 같은 직종·직급 공고나 기준표(가정치)로 추정해요.</p>`, "wide2")}
+      <div class="ld-colstack">
+      ${ldCard("날짜별 새 공고", `최근 ${d.days}일 · 처음 본 날 기준`, `<div class="ld-days">${d.daily.map((x, i) => `
+        <div class="ld-day" data-tip="${esc(`<b>${x.date}</b><div class='tt-row'>새 공고<b>${x.n}</b></div>`)}" tabindex="0"><span class="ld-ctrack"><i style="height:${(100 * x.n) / maxDay}%"></i></span>
+          <small>${(i % Math.ceil(d.daily.length / 5) === 0 && d.daily.length - 1 - i >= Math.ceil(d.daily.length / 5) / 2) || i === d.daily.length - 1 ? x.date.slice(5).replace("-", "/") : ""}</small></div>`).join("")}</div>`)}
+      ${ldCard("근무 형태 · 출처", "", `<div class="ld-mini">${[["근무 형태", d.work_types], ["출처", d.sources]].map(([t, arr]) => `<div><h6>${t}</h6>${arr.map((x) => `
+        <div class="ld-mrow"><span>${esc(x.k)}</span><span class="ld-track"><i style="width:${(100 * x.n) / Math.max(...arr.map((a) => a.n), 1)}%"></i></span><b>${x.n}</b></div>`).join("")}</div>`).join("")}</div>`)}
+      </div>
+    </div>`}
+  </section>`;
+  $("#ldTable").addEventListener("click", () => { state.ldTable = !state.ldTable; renderLiDash(); });
+}
+document.addEventListener("click", (e) => {
+  const b = e.target.closest("[data-lddays]"); if (b) { state.ldDays = +b.dataset.lddays; loadLiDash(); }
+});
+// 대시보드 막대 툴팁 (값은 표로 보기에도 있음)
+document.addEventListener("mousemove", (e) => {
+  const t = e.target.closest("#lsDashPane [data-tip]");
+  if (t) { tip(t.dataset.tip, e); state.ldTipOn = true; }
+  else if (state.ldTipOn) { tip(null); state.ldTipOn = false; }   // 이 대시보드가 띄운 툴팁만 닫음 (다른 화면 툴팁은 그대로)
 });

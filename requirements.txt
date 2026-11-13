@@ -15,3 +15,4 @@ pypdf==7.0.1
 python-docx==1.2.0
 # src/agent.py (교육 실습 LangGraph Agent)
 langgraph
+openpyxl==3.1.5

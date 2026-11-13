@@ -847,14 +847,22 @@ async def linkedin_import(file: UploadFile | None = File(None), text: str = Form
         prof = _json.loads(profile or "{}")
     except ValueError:
         prof = {}
+    excel = None
+    if source == "링크드인 구인 엑셀":   # 엑셀은 피드에 쌓아 두기 → 다음 파일을 올리면 새 공고(NEW) 구분 · 구인 회사 분석에 반영
+        log = jobfeed.ingest(jobs, "linkedin-excel")
+        new_ids = set(log.get("new_ids", []))
+        for j in jobs:
+            n = jobfeed.normalize(j, "linkedin-excel")
+            j["is_new"] = bool(n and n["job_id"] in new_ids)
+        excel = {"new": log["new"], "seen": log["seen"], "info": getattr(li.parse_any, "last_info", None)}
     out = li.analyze(jobs, prof if isinstance(prof, dict) else {})
     fams = {}
     for j in out:
         fams[j["family"]] = fams.get(j["family"], 0) + 1
     mine = out[0]["fit"]["my_family"] if out else ""
-    return {"source": source, "count": len(out), "jobs": out,
+    return {"source": source, "count": len(out), "jobs": out, "excel": excel,
             "summary": {"families": [{"family": f, "n": n} for f, n in sorted(fams.items(), key=lambda x: -x[1])],
-                        "kinds": {k: sum(1 for j in out if j["kind"] == k) for k in ("saved", "applied", "alert")},
+                        "kinds": {k: sum(1 for j in out if j["kind"] == k) for k in ("saved", "applied", "alert", "excel")},
                         "same_family": sum(1 for j in out if mine and j["family"] == mine),
                         "good": sum(1 for j in out if j["fit"]["score"] >= 70),
                         "my_family": mine, "my_tier": out[0]["fit"]["my_tier"] if out else ""},
@@ -914,7 +922,8 @@ def feed_list(body: FeedIn):
     rows = [{"title": x["title"], "company": x["company"], "location": x["location"], "job_id": x["job_id"], "url": x["url"],
              "date": x["first_seen"], "kind": "feed", "source": x["source"], "source_name": x["source_name"], "is_new": x["is_new"],
              "tags": x.get("tags", []), "alumni": x.get("alumni", 0), "work_type": x.get("work_type", ""), "posted": x.get("posted", ""),
-             "first_seen": x["first_seen"], "runs": x.get("runs", 1)} for x in f["items"]]
+             "first_seen": x["first_seen"], "runs": x.get("runs", 1), "description": x.get("description", ""), "seniority": x.get("seniority", ""),
+             "salary_text": x.get("salary_text", ""), "employment": x.get("employment", "")} for x in f["items"]]
     out = li.analyze(rows, body.profile) if rows else []
     # 같은 점수면 오늘 새로 나온 공고 먼저
     out.sort(key=lambda x: (-x["fit"]["score"], not x["is_new"], x["title"]))
@@ -939,7 +948,8 @@ def companies(body: CompaniesIn):
     f = jobfeed.feed(max(1, min(body.days, 60)))
     rows = [{"title": x["title"], "company": x["company"], "location": x["location"], "job_id": x["job_id"], "url": x["url"],
              "date": x["first_seen"], "kind": "feed", "source_name": x["source_name"], "is_new": x["is_new"], "tags": x.get("tags", []),
-             "alumni": x.get("alumni", 0), "work_type": x.get("work_type", ""), "posted": x.get("posted", ""), "runs": x.get("runs", 1)}
+             "alumni": x.get("alumni", 0), "work_type": x.get("work_type", ""), "posted": x.get("posted", ""), "runs": x.get("runs", 1),
+             "description": x.get("description", ""), "seniority": x.get("seniority", ""), "salary_text": x.get("salary_text", "")}
             for x in f["items"]]
     seen = {r["url"] or r["job_id"] for r in rows}
     for j in body.imported[:300]:
@@ -957,3 +967,44 @@ def companies(body: CompaniesIn):
                 c["company_fit"] = analysis.fit_total(get_job(c["service_job_id"]), body.saju, body.profile)
     return {"companies": out, "count": len(out), "jobs": len(analyzed),
             "formula": "회사 적합도(참고 100) = 가장 잘 맞는 공고 적합도 × 0.6 + 내 직종 공고 비중 × 20 + 채용 활발도 20(공고 수 최대 10 + 새 공고 10) — 매칭률·회사 인연도와 별개"}
+
+
+@app.get("/api/linkedin/excel-template")
+def linkedin_excel_template():
+    """링크드인 구인 엑셀 양식 (열 이름 + 예시 1줄, 가상)."""
+    from .linkedin_excel import template_xlsx
+    return Response(template_xlsx(), media_type="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+                    headers={"Content-Disposition": "attachment; filename=linkedin_jobs_template.xlsx"})
+
+# ---------- 📊 링크드인 채용 대시보드 ----------
+class LiDashIn(BaseModel):
+    profile: dict = {}
+    days: int = 30
+    imported: list[dict] = []
+
+
+@app.post("/api/li-dashboard")
+def li_dashboard(body: LiDashIn):
+    """쌓인 링크드인 공고(엑셀·배치) + 화면에서 가져온 공고 → 차트용 묶음."""
+    from . import company_scan, li_dashboard as ld, linkedin_import as li
+    f = jobfeed.feed(max(1, min(body.days, 60)))
+    rows = [{"title": x["title"], "company": x["company"], "location": x["location"], "job_id": x["job_id"], "url": x["url"],
+             "date": x["first_seen"], "first_seen": x["first_seen"], "kind": "feed", "source_name": x["source_name"], "is_new": x["is_new"],
+             "tags": x.get("tags", []), "alumni": x.get("alumni", 0), "work_type": x.get("work_type", ""), "posted": x.get("posted", ""),
+             "runs": x.get("runs", 1), "description": x.get("description", ""), "seniority": x.get("seniority", ""),
+             "salary_text": x.get("salary_text", "")} for x in f["items"]]
+    seen = {r["url"] or r["job_id"] for r in rows}
+    for j in body.imported[:300]:
+        k = j.get("url") or j.get("job_id")
+        if j.get("title") and k not in seen:
+            rows.append({k2: j.get(k2) for k2 in ("title", "company", "location", "job_id", "url", "date", "kind", "work_type")}
+                        | {"is_new": False, "source_name": "가져온 공고"})
+            seen.add(k)
+    if not rows:
+        return {"empty": True, "last_run": f["last_run"]}
+    jobs = li.analyze(rows, body.profile)
+    cos = company_scan.analyze_companies(jobs, body.profile)
+    out = ld.build(jobs, cos, body.profile, body.days)
+    out["last_run"] = f["last_run"]
+    out["days"] = body.days
+    return out
