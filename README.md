@@ -25,6 +25,8 @@
    ├─ saju.py ─────────── 사주 4기둥 · 물(水) · 이직운 · 공고 마감일과의 인연 %
    ├─ linkedin_jobs.py ── 링크드인 공고 → 직종 · 직급 · 예상 연봉 · 인터뷰 핵심 키워드
    ├─ linkedin_import.py  데이터 내보내기 ZIP/CSV · 채용 알림 메일(.eml/HTML/붙여넣기) · 채용 화면 PDF → 공고 목록 + 참고 적합도
+   ├─ linkedin_excel.py ─ 링크드인 구인 엑셀(.xlsx) → 공고 목록 (영어·한글 열 이름 자동 인식, 쌓기·NEW)
+   ├─ li_dashboard.py ─── 📊 채용 대시보드: KPI · 직종·직급 분포 · 회사 Top 10 · 예상 연봉 · 인터뷰 키워드
    ├─ company_scan.py ─── 링크드인 공고를 회사별로: 채용 규모 · 채용 신호 · 나와의 적합
    ├─ jobfeed.py · batch.py  매일 배치: 에이전트 스캔 결과 받기 · Greenhouse/Lever/Ashby 공개 채용 API · 중복 제거 · NEW
    ├─ resume_file.py ──── PDF·Word·txt 글자 추출 (링크드인 프로필 PDF · PDF 링크 영역 → 공고 주소)
@@ -79,6 +81,8 @@ run.bat
 - 51개는 규칙을 맞춘 세트라 낙관적일 수 있어, 처음 보는 30개(97%)를 더 정직한 수치로 본다
 - 처음부터 끝까지 시험(배치 15개 → 피드 → 회사 분석 → AI 상세): 파트너십 영업 9년 기준 상위 7개 모두 파트너십·제휴·채널·BD, 이름만 Partner인 HR·마케팅·채용 직무는 맨 아래, 8/8 통과
 - 서비스 전체 흐름 시험 12/12, DB·레주메 암호화 보관·링크드인 PDF·공고 가져오기·배치 시험 모두 통과 (예시 회사·인물은 모두 가상)
+- 링크드인 구인 엑셀 시험 14/14 (영어/한글 머리글 · 3번째 줄 머리글 · 2번 올리기 NEW 구분 · '억' 연봉 · .xls 안내)
+- 최종 점검 (2026-11-13): 자동 시험 **158개 모두 통과** — 상세는 `docs/COMPLETION_REPORT.md`
 
 ## 트라이앤에러 회고
 - **시도했지만 실패한(채택하지 않은) 접근**
@@ -105,14 +109,16 @@ run.bat
 - `app/main.py:189` — 매칭 공고 추천 (매칭률 + 회사 인연도 + 키워드 매칭)
 - `app/main.py:779` — 링크드인 공고 1개 상세 분석 (직종·직급·예상 연봉·인터뷰 키워드·내 레주메 비교)
 - `app/main.py:828` — 내 링크드인 공고 가져오기 (ZIP·CSV·메일·PDF → 나와 맞는 순위)
-- `app/main.py:880` — 매일 배치 받기 (`X-Batch-Token`) · `:935` 구인 회사 분석
+- `app/main.py:888` — 매일 배치 받기 (`X-Batch-Token`) · `:944` 구인 회사 분석 · `:972` 엑셀 양식 · `:986` 📊 채용 대시보드
 - `app/ai.py:43` · `:87` · `:134` · `:223` — Bedrock Claude 구조화 출력 (첨삭 · 레주메 요약 · 공고 정리 · 인터뷰 전략)
 - `app/linkedin_jobs.py:45` — 직무명 우선 규칙 `TITLE_RULES` · `:60` 직종 · `:96` 직급 · `:144` 예상 연봉 · `:246` 인터뷰 핵심 키워드
-- `app/linkedin_import.py:110` — 채용 알림 메일/PDF 파싱 · `:221` 참고 적합도 · `:247` 공고 분석
+- `app/linkedin_import.py:110` — 채용 알림 메일/PDF 파싱 · `:167` 파일 종류별 읽기 · `:228` 참고 적합도 · `:307` 공고 분석
+- `app/linkedin_excel.py:15` — 엑셀 열 이름 사전 `ALIASES` · `:61` 엑셀 읽기 · `:113` 엑셀 양식
+- `app/li_dashboard.py:17` — 📊 채용 대시보드 데이터 만들기
 - `app/company_scan.py:51` — 회사별 채용 규모·신호·회사 적합도
-- `app/jobfeed.py:49` · `app/batch.py` — 배치 받기·중복 제거 · 공개 채용 API
+- `app/jobfeed.py:52` · `app/batch.py` — 배치 받기·중복 제거 · 공개 채용 API
 - `app/keywords.py:94` — 레주메 키워드 매칭 · `:222` 인터뷰 '최근 업무 강조 키워드'
 - `app/saju.py:198` — 사주 인연 % · `app/analysis.py:140` 회사 인연도(100점)
 - `app/resumes.py:99` — 레주메 암호화 보관 · `app/store.py:54` DB 연결(SQLite/PostgreSQL)
 - `src/agent.py` — (교육 실습) LangGraph 회의실 안내 Agent · `src/tools.py` 도메인 도구
-- 문서: `SERVICE.md`(서비스 설계 전체) · `CLAUDE.md`(개발 규칙) · `docs/LINKEDIN_BATCH_PLAN.md`(링크드인 매일 배치 방안)
+- 문서: `SERVICE.md`(서비스 설계 전체) · `CLAUDE.md`(개발 규칙) · `docs/LINKEDIN_BATCH_PLAN.md`(링크드인 매일 배치 방안) · **`docs/COMPLETION_REPORT.md`(완료 보고서)**
