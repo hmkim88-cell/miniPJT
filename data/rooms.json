@@ -1,0 +1,8 @@
+[
+  {"name": "한라", "floor": 3, "capacity": 4, "equipment": ["TV 모니터", "화이트보드"], "note": "1:1 면담·소규모 회의용"},
+  {"name": "지리", "floor": 3, "capacity": 6, "equipment": ["TV 모니터", "화상회의 카메라"], "note": "창가, 자연광"},
+  {"name": "설악", "floor": 5, "capacity": 8, "equipment": ["빔프로젝터", "화이트보드", "화상회의 카메라"], "note": "스탠딩 테이블 있음"},
+  {"name": "태백", "floor": 5, "capacity": 10, "equipment": ["대형 TV", "화상회의 카메라", "스피커폰"], "note": "외부 고객 미팅 우선"},
+  {"name": "북한", "floor": 7, "capacity": 12, "equipment": ["빔프로젝터", "마이크 2개", "화이트보드"], "note": "교육·워크숍용"},
+  {"name": "백두", "floor": 7, "capacity": 20, "equipment": ["빔프로젝터", "무선 마이크 4개", "화상회의 카메라", "음향 시스템"], "note": "대회의실, 전사 발표용"}
+]

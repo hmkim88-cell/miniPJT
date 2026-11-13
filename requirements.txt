@@ -1,0 +1,17 @@
+fastapi==0.162.4
+uvicorn==0.54.0
+python-multipart==0.0.33
+pydantic==2.14.2
+python-dotenv==1.2.4
+boto3==1.43.123
+langchain-core==1.7.3
+langchain-aws==1.9.1
+korean-lunar-calendar
+httpx==0.28.1
+SQLAlchemy==2.1.6
+psycopg[binary]==3.3.8
+cryptography==50.0.2
+pypdf==7.0.1
+python-docx==1.2.0
+# src/agent.py (교육 실습 LangGraph Agent)
+langgraph

@@ -1,0 +1,288 @@
+<!doctype html>
+<html lang="ko">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>커리어인연 · IT 커리어 매칭</title>
+  <link rel="stylesheet" href="https://cdn.jsdelivr.net/gh/orioncactus/pretendard@v1.3.9/dist/web/static/pretendard.min.css">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link href="https://fonts.googleapis.com/css2?family=Noto+Serif+KR:wght@500;700;900&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="/static/style.css?v=20261113a">
+</head>
+<body>
+<div class="shell">
+  <!-- ───────── 사이드바 ───────── -->
+  <aside class="side">
+    <div class="brand">
+      <div class="brand-mark">緣</div>
+      <div>
+        <div class="brand-name">커리어인연</div>
+        <div class="brand-sub">외국계 IT × AI 코칭 × 사주</div>
+      </div>
+    </div>
+
+    <nav class="steps" id="steps">
+      <button class="step active" data-go="profile"><span class="num">1</span><span><b>프로필 입력</b><small>내 링크드인 · 희망 조건</small></span></button>
+      <button class="step" data-go="review" disabled><span class="num">2</span><span><b>AI 이력서 첨삭</b><small>강점 · 보완점</small></span></button>
+      <button class="step" data-go="saju" disabled><span class="num">3</span><span><b>나의 사주</b><small>팔자 · 오행 · 운세</small></span></button>
+      <button class="step" data-go="match" disabled><span class="num">4</span><span><b>매칭 공고</b><small>커리어 · 연봉/직급 · 인연</small></span></button>
+      <button class="step li-step" data-go="liscan"><span class="num">in</span><span><b>링크드인 공고 분석</b><small>직종 · 직급 · 연봉 · 인터뷰</small></span></button>
+      <button class="step dash-step" data-go="overview" disabled><span class="num">★</span><span><b>종합 대시보드</b><small>회사 인연도 한눈에</small></span></button>
+      <button class="step" data-go="apps"><span class="num">5</span><span><b>연결 요청 내역</b><small id="appCount">0건</small></span></button>
+      <button class="step ru-step" data-go="resume"><span class="num">↻</span><span><b>레주메 업데이트</b><small id="ruNav">파일 올리기 · AI 분석 요약</small></span></button>
+    </nav>
+
+    <button class="side-link" data-go="jobs">외국계 IT 공고 둘러보기 →</button>
+    <button class="side-link" data-go="recruiter">구인자(채용 담당자) 화면 →</button>
+
+    <div class="side-foot">데모 서비스 · 예시 공고·회사·담당자는 가상입니다.<br>합격률은 추정치이며 실제 결과와 무관합니다.</div>
+  </aside>
+
+  <main class="main">
+    <!-- ───────── 1. 프로필 ───────── -->
+    <section class="view active" id="view-profile">
+      <header class="hero">
+        <p class="eyebrow">STEP 1</p>
+        <h1>외국계 IT 기업과의 <em>인연</em>을 찾습니다</h1>
+        <p class="lead"><b>개발 · 데이터·AI · 인프라 · 세일즈 · 프리세일즈 · 딜리버리 · 고객 성공</b> 직종별로, 내 링크드인 프로필과 희망 연봉·직급, 생년월일을 넣으면 <b>커리어 · 연봉/직급 · 사주 인연</b> 세 가지로 외국계 IT 포지션과의 매칭률을 계산하고 채용 담당자와 연결해 드려요.</p>
+      </header>
+
+      <div class="grid-2">
+        <div class="card">
+          <div class="card-head">
+            <h2>프로필</h2>
+            <div class="import">
+              <button class="chip-btn linkedin" id="liConnect"><span>in</span> 내 링크드인 연결</button>
+              <button class="chip-btn file" type="button" data-pick="profile"><span>⇪</span> 레주메 파일 올리기</button>
+              <button class="chip-btn ghost" data-import="linkedin">예시 프로필</button>
+            </div>
+          </div>
+          <div class="li-status" id="liStatus"></div>
+          <input type="file" id="fileInput" accept=".pdf,.docx,.txt,.md" hidden>
+          <p class="hint">PDF·Word·텍스트 레주메 파일을 올리거나 입력칸에 <b>끌어다 놓으면</b> 글자를 읽어 넣어 줘요(파일은 저장하지 않아요). 링크드인 연결로는 <b>이름·이메일·사진</b>만 받아요. 경력·기술은 내 링크드인 프로필 화면을 복사해 붙여넣어 주세요. <span class="tag-demo">예시 프로필은 시연용</span></p>
+          <input class="url-in" id="linkedinUrl" placeholder="내 링크드인 프로필 URL (선택, 채용 담당자에게 전달) 예) https://www.linkedin.com/in/내아이디">
+          <div class="li-url-state" id="liUrlState"></div>
+          <div class="li-pdf">
+            <div class="li-pdf-head"><span class="li-pdf-ic">in</span><div><b>링크드인 프로필로 레주메 채우기</b><small>링크드인이 직접 만들어 주는 <b>프로필 PDF</b>를 올리면 경력·기술을 읽어 와요 (서버는 링크드인에 접속하지 않아요)</small></div>
+              <button type="button" class="btn-primary sm" data-pick="profile">PDF 올리기</button></div>
+            <ol class="li-pdf-steps"><li><a id="liMyProfile" href="https://www.linkedin.com/in/" target="_blank" rel="noopener">내 링크드인 프로필 열기 ↗</a></li><li>프로필 사진 아래 <b>더보기</b> → <b>PDF로 저장</b> <small>(Resources → Save to PDF)</small></li><li>받은 PDF를 <b>PDF 올리기</b> 또는 아래 입력칸에 끌어다 놓기</li></ol>
+          </div>
+          <textarea id="profileText" rows="9" placeholder="예) 김하늘 · 백엔드 개발자&#10;경력: 넥스트소프트 (2022.03~현재) Python, FastAPI로 주문 API 개발...&#10;기술: Python, AWS, Docker ..."></textarea>
+          <div class="counter"><span id="charCount">0</span>자</div>
+          <div class="want-row three">
+            <label class="field">희망 직종
+              <select id="wantFamily"><option value="">이력서 기준 (AI 판단)</option></select>
+            </label>
+            <label class="field">기대 연봉 (만원)<input type="number" id="expSalary" value="7500" min="0" step="100"></label>
+            <label class="field">희망 직급
+              <select id="wantLevel"><option value="">이력서 기준</option><option>주니어</option><option>미들</option><option>시니어</option><option>리드</option></select>
+            </label>
+          </div>
+          <div class="want-row three">
+            <label class="field">출신 학교 <small>(학연)</small><input id="school" list="schoolList" placeholder="예) 서울대학교"></label>
+            <label class="field">출신 지역 <small>(지연)</small><select id="hometown"><option value="">선택 안 함</option></select></label>
+            <label class="field">이전 회사 <small>(쉼표로 구분)</small><input id="pastCompanies" placeholder="예) 삼성SDS, 네이버"></label>
+            <datalist id="schoolList"></datalist>
+          </div>
+          <p class="hint" style="margin-top:6px">학교·지역·이전 회사는 <b>매칭률에 넣지 않아요.</b> 같은 학교·지역·회사 출신 재직자(추천인으로 등록·동의한 사람) 중 추천서를 써 줄 수 있는 사람만 찾아 줘요.</p>
+          <div class="rs-box" id="rsBox">
+            <label class="rs-consent"><input type="checkbox" id="rsConsent">
+              <span><b>내 레주메를 보관해 다음에 다시 쓰기</b><small>레주메 글·희망 조건·학교/지역/이전 회사·AI 첨삭 결과를 <b>암호화</b>해서 1년간 보관해요. 생년월일·사주는 보관하지 않고, 채용 담당자에게도 보내지 않아요. 언제든 삭제할 수 있어요.</small></span></label>
+            <div class="rs-status" id="rsStatus"></div>
+          </div>
+        </div>
+
+        <div class="card saju-input">
+          <div class="card-head"><h2>사주 정보</h2><span class="seal">命</span></div>
+          <p class="hint">정확한 사주팔자를 위해 태어난 시간까지 입력해 주세요.</p>
+
+          <label class="field">생년월일
+            <input type="date" id="birth" value="1994-08-17" min="1920-01-01" max="2010-12-31">
+          </label>
+
+          <div class="field">달력
+            <div class="seg" id="calendar">
+              <button class="on" data-v="solar">양력</button>
+              <button data-v="lunar">음력</button>
+            </div>
+            <label class="check" id="leapWrap" hidden><input type="checkbox" id="leap"> 윤달</label>
+          </div>
+
+          <label class="field">태어난 시간
+            <select id="hour">
+              <option value="">모름 (세 기둥만 계산)</option>
+            </select>
+          </label>
+
+          <div class="privacy">생년월일은 사주 계산에만 쓰이며 회사에 전달되지 않아요.</div>
+        </div>
+      </div>
+
+      <div class="cta-row sticky-cta">
+        <ul class="ready" id="ready" aria-label="입력 확인"></ul>
+        <div class="cta-right">
+          <div class="cta-note">AI 분석에 20~40초 정도 걸려요.</div>
+          <button class="btn-primary" id="analyzeBtn">AI 분석 시작 <span>→</span></button>
+        </div>
+      </div>
+    </section>
+
+    <!-- ───────── 2. 첨삭 ───────── -->
+    <section class="view" id="view-review">
+      <header class="hero small"><p class="eyebrow">STEP 2</p><h1>AI 이력서 첨삭</h1></header>
+      <div id="reviewBody"></div>
+      <div class="cta-row"><button class="btn-ghost" data-go="profile">← 프로필 고치기</button><button class="btn-primary" data-go="saju">나의 사주 보기 <span>→</span></button></div>
+    </section>
+
+    <!-- ───────── 3. 사주 ───────── -->
+    <section class="view" id="view-saju">
+      <div class="hanji">
+        <header class="hero small"><p class="eyebrow gold">STEP 3</p><h1 class="serif">나의 사주팔자</h1></header>
+        <div id="sajuBody"></div>
+      </div>
+      <div class="cta-row"><span class="cta-left"><button class="btn-ghost" data-go="review">← 이력서 첨삭</button><button class="btn-ghost" data-go="overview">★ 종합 대시보드 보기</button></span><button class="btn-primary gold" id="matchBtn">인연 닿는 공고 찾기 <span>→</span></button></div>
+    </section>
+
+    <!-- ───────── 4. 추천 ───────── -->
+    <section class="view" id="view-match">
+      <header class="hero small">
+        <p class="eyebrow">STEP 4</p><h1>외국계 IT 매칭 공고</h1>
+        <p class="lead">매칭률 = <b class="c-comp">① 커리어 34%</b> (기술·경력 연차) + <b class="c-pay">② 연봉·직급 33%</b> (기대 연봉·희망 직급) + <b class="c-aff">③ 사주 인연 33%</b> (공고 마감일과의 궁합)</p>
+      </header>
+      <div id="matchBody"></div>
+      <div class="cta-row"><button class="btn-ghost" data-go="saju">← 나의 사주</button><button class="btn-primary" data-go="overview">★ 종합 대시보드로 비교하기 <span>→</span></button></div>
+    </section>
+
+    <!-- ───────── ★ 종합 대시보드 ───────── -->
+    <section class="view" id="view-overview">
+      <header class="ov-head">
+        <div>
+          <p class="eyebrow">DASHBOARD</p>
+          <h1>커리어 인연 종합 대시보드</h1>
+          <p class="lead">지금 채용 중인 외국계 IT 회사와 나의 <b>회사 인연도</b>(한국 사업확대 20 · 주가 성장성 20 · 커리어 30 · 사주 인연 20 · 미래사업 10)를 한 화면에서 비교해요.</p>
+        </div>
+        <div class="ov-asof" id="ovAsof"></div>
+      </header>
+      <div id="ovBody"></div>
+    </section>
+
+    <!-- ───────── 링크드인 공고 분석 (구직자 특별 섹션) ───────── -->
+    <section class="view" id="view-liscan">
+      <header class="ls-hero">
+        <div><p class="eyebrow ls-eb"><span class="ls-in">in</span> LINKEDIN JOB ANALYZER</p>
+          <h1>링크드인 공고 분석</h1>
+          <p class="lead">관심 있는 링크드인 공고를 붙여넣으면 <b>직종</b>(세일즈·개발·딜리버리 …) · <b>직급</b>(일반·주니어·시니어·리더) · <b>예상 연봉</b> · <b>인터뷰에서 가장 중요한 키워드</b>를 바로 알려 드려요.</p></div>
+        <div class="ls-acct" id="lsAcct"></div>
+      </header>
+      <nav class="ls-tabs four" role="tablist">
+        <button class="on star" data-lstab="co" role="tab"><b>★ 구인 회사 분석</b><small>링크드인 공고 → 회사별 채용 규모 · 신호 · 나와의 적합</small></button>
+        <button data-lstab="feed" role="tab"><b>⓪ 오늘의 새 공고</b><small>매일 정해진 시각 배치 → 새 공고 · 나와 맞는 순위</small></button>
+        <button data-lstab="import" role="tab"><b>① 내 링크드인 공고 가져오기</b><small>저장한 공고 · 지원한 공고 · 채용 알림 → 나와 맞는 회사 순위</small></button>
+        <button data-lstab="one" role="tab"><b>② 공고 1개 자세히 분석</b><small>공고 글 붙여넣기 → 직종·직급·연봉·인터뷰 키워드</small></button>
+      </nav>
+      <div id="lsCoPane"></div>
+      <div id="lsFeedPane" hidden></div>
+      <div id="lsImportPane" hidden>
+        <div class="ls-srcs">
+          <section class="ls-src"><span class="ls-src-n">A</span><h4>링크드인 데이터 내보내기 <em>추천</em></h4>
+            <p>링크드인에서 <b>저장한 공고</b>와 <b>지원한 공고</b>를 한 번에 가져와요.</p>
+            <ol><li>링크드인 <b>설정 및 개인정보</b> → <b>데이터 개인정보</b></li><li><b>내 데이터 사본 받기</b> → '채용 공고(Jobs)' 선택 → 요청</li><li>메일로 온 <b>ZIP</b>(또는 Saved Jobs.csv · Job Applications.csv)을 아래에 올리기</li></ol>
+            <a href="https://www.linkedin.com/mypreferences/d/download-my-data" target="_blank" rel="noopener">링크드인 데이터 받기 페이지 ↗</a></section>
+          <section class="ls-src"><span class="ls-src-n">B</span><h4>링크드인 채용 알림 메일</h4>
+            <p>Gmail로 받은 <b>링크드인 채용 알림</b>의 새 공고들을 가져와요.</p>
+            <ol><li>Gmail에서 링크드인 채용 알림 메일 열기</li><li><b>⋮ → 메일 다운로드</b>(.eml) 또는 <b>인쇄 → PDF로 저장</b>해서 올리거나</li><li>메일 내용을 전체 선택해 아래 칸에 붙여넣기</li></ol>
+            <a href="https://www.linkedin.com/jobs/" target="_blank" rel="noopener">링크드인에서 채용 알림 만들기 ↗</a></section>
+          <section class="ls-src soon"><span class="ls-src-n">C</span><h4>Gmail 자동 연동 <em class="gray">준비</em></h4>
+            <p>Gmail 계정을 연결하면 링크드인 채용 알림 메일을 <b>자동으로</b> 읽어 와요.</p>
+            <ol><li>Google Cloud에서 OAuth 앱 만들기 (Gmail 읽기 권한)</li><li>상위 폴더의 <code>.env</code> 파일에 Google 키 넣기</li><li>본인 Gmail로 로그인 · 동의</li></ol>
+            <span class="muted">키가 준비되면 연결해 드려요 (지금은 A·B로)</span></section>
+        </div>
+        <div class="card ls-imp-card">
+          <label class="drop ls-drop" id="lsDrop" tabindex="0"><b>ZIP · CSV · PDF · .eml 파일을 끌어다 놓거나 <u>파일 선택</u></b>
+            <small>링크드인 데이터 내보내기(ZIP·CSV) · 채용 알림 메일(.eml·.html) · <b>채용 화면을 PDF로 저장한 파일</b>(알림 메일·검색 결과·공고 1개) · 25MB까지 · 파일은 저장하지 않아요</small><span class="drop-file" id="lsDropFile"></span></label>
+          <input type="file" id="lsFile" accept=".zip,.csv,.pdf,.eml,.html,.htm,.txt" hidden>
+          <div class="ru-or"><span>또는 채용 알림 메일 내용 붙여넣기</span><button type="button" class="link-btn" id="lsImpSample">예시 데이터로 해 보기</button></div>
+          <textarea id="lsMail" rows="4" placeholder="링크드인 채용 알림 메일을 전체 선택(Ctrl+A) → 복사 → 여기에 붙여넣기"></textarea>
+          <div class="ls-act"><small class="muted">링크드인이 본인에게 주는 데이터만 써요 — 서버는 링크드인에 접속하지 않아요.</small>
+            <button class="btn-primary" id="lsImpGo">가져와서 분석하기 <span>→</span></button></div>
+        </div>
+        <div id="lsImpResult"></div>
+      </div>
+      <div id="lsOnePane" hidden>
+      <div class="card ls-in-card">
+        <ol class="ls-steps"><li><b>1</b>링크드인에서 공고 열기</li><li><b>2</b>공고 글 전체 드래그 → <kbd>Ctrl</kbd>+<kbd>C</kbd></li><li><b>3</b>아래에 <kbd>Ctrl</kbd>+<kbd>V</kbd> → 분석</li></ol>
+        <div class="ls-file-row"><button type="button" class="btn-ghost sm" id="lsOneFileBtn">📄 공고 파일 올리기 <small>PDF · Word · txt</small></button>
+          <span class="muted">링크드인 공고 화면에서 <b>Ctrl+P → PDF로 저장</b>한 파일을 올리면 글과 공고 주소를 채워요</span><span class="drop-file" id="lsOneFileName"></span>
+          <input type="file" id="lsOneFile" accept=".pdf,.docx,.txt,.md" hidden></div>
+        <label class="pf"><span>링크드인 공고 주소 <small>(선택 · 결과에 원문 링크로)</small></span><input id="lsUrl" placeholder="https://www.linkedin.com/jobs/view/1234567890"></label>
+        <label class="pf"><span>공고 글 *</span><textarea id="lsText" rows="7" placeholder="About the job&#10;We are hiring an Enterprise Account Executive...&#10;Requirements: 8+ years of B2B sales..."></textarea></label>
+        <div class="ls-act"><small class="muted">서버는 링크드인에 접속하지 않아요 — 붙여넣은 글만 분석하고 저장하지 않아요. <button type="button" class="link-btn" id="lsSample">예시 공고 넣기</button></small>
+          <button class="btn-primary" id="lsGo">공고 분석하기 <span>→</span></button></div>
+        <div class="ls-hist" id="lsHist"></div>
+      </div>
+      <div id="lsResult"></div>
+      </div>
+    </section>
+
+    <!-- ───────── 레주메 업데이트 (파일 올리기 · AI 분석 요약 · 버전) ───────── -->
+    <section class="view" id="view-resume">
+      <header class="hero small"><p class="eyebrow">RESUME</p><h1>레주메 업데이트</h1>
+        <p class="lead">새 레주메 파일을 올리면 AI가 <b>한 줄 소개 · 경력 타임라인 · 주요 성과 · 기술</b>로 분석·요약하고, 이전 버전과 <b>무엇이 바뀌었는지</b> 알려 줘요. 확인한 뒤 "이 레주메로 업데이트"를 누르면 매칭·대시보드에 반영돼요.</p></header>
+      <div class="ru-top">
+        <div class="card ru-in">
+          <div class="card-head"><h2>① 새 레주메 넣기</h2><span class="ru-cmp" id="ruCmp"></span></div>
+          <label class="drop" id="ruDrop" tabindex="0">
+            <b>레주메 파일을 여기에 끌어다 놓거나 <u>파일 선택</u></b>
+            <small>PDF · Word(.docx) · 텍스트(.txt) · 5MB까지 · 파일은 저장하지 않고 글자만 읽어요</small>
+            <span class="drop-file" id="ruFile"></span>
+          </label>
+          <div class="ru-or"><span>또는 직접 붙여넣기</span><button type="button" class="btn-ghost sm" id="ruFromProfile">지금 프로필의 레주메 가져오기</button></div>
+          <textarea id="ruText" rows="10" placeholder="레주메 내용을 붙여넣거나 위에 파일을 올려 주세요."></textarea>
+          <div class="ru-act"><span class="counter"><span id="ruCount">0</span>자</span>
+            <button class="btn-primary" id="ruAnalyze">AI 분석·요약 <span>→</span></button></div>
+        </div>
+        <aside class="card ru-ver">
+          <h2>내 레주메 버전</h2>
+          <div id="ruVersions"></div>
+        </aside>
+      </div>
+      <div id="ruResult"></div>
+    </section>
+
+    <!-- ───────── 5. 지원 내역 ───────── -->
+    <section class="view" id="view-apps">
+      <header class="hero small"><p class="eyebrow">STEP 5</p><h1>연결 요청 내역</h1><p class="lead">채용 담당자가 상태를 바꾸면 여기에 반영돼요.</p></header>
+      <div id="appsBody"></div>
+    </section>
+
+    <!-- ───────── 전체 공고 ───────── -->
+    <section class="view" id="view-jobs">
+      <header class="hero small"><p class="eyebrow">JOBS</p><h1>외국계 IT 공고</h1></header>
+      <div class="fam-row" id="jobFamilies" role="group" aria-label="직종"></div>
+      <div class="search">
+        <input id="q" placeholder="직무, 회사, 기술 검색 (예: Python, React)">
+        <div class="seg" id="levelFilter">
+          <button class="on" data-v="">전체</button><button data-v="주니어">주니어</button><button data-v="미들">미들</button><button data-v="시니어">시니어</button><button data-v="리드">리드</button>
+        </div>
+      </div>
+      <div id="jobsBody" class="job-grid"></div>
+    </section>
+
+    <!-- ───────── 구인자 ───────── -->
+    <section class="view" id="view-recruiter">
+      <header class="hero small"><p class="eyebrow">RECRUITER</p><h1>구인자 · 채용 담당자</h1>
+        <p class="lead">외국계 IT 공고를 <b>직접 등록</b>하고, 연결 요청한 후보자를 확인해요. 후보자의 생년월일·사주·인연 점수는 전달되지 않아요.</p></header>
+      <div id="recruiterBody"></div>
+    </section>
+  </main>
+</div>
+
+<div class="loading" id="loading" hidden>
+  <div class="loader"><div class="ring"></div><div class="loader-char">緣</div></div>
+  <p id="loadingText">분석 중...</p>
+</div>
+<div class="toast" id="toast"></div>
+
+<script src="/static/app.js?v=20261113a"></script>
+</body>
+</html>

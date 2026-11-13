@@ -1,0 +1,5 @@
+[
+  {"ats": "greenhouse", "slug": "회사아이디_예시", "company": "회사 이름 (boards.greenhouse.io/<slug>)", "korea_only": true},
+  {"ats": "lever", "slug": "회사아이디_예시", "company": "회사 이름 (jobs.lever.co/<slug>)", "korea_only": true},
+  {"ats": "ashby", "slug": "회사아이디_예시", "company": "회사 이름 (jobs.ashbyhq.com/<slug>)", "korea_only": true}
+]

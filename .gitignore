@@ -1,0 +1,15 @@
+# 비밀값·개인 데이터 — 절대 커밋하지 않음
+.env
+*.env
+data/.resume.key
+data/*.db
+*.db
+*.sqlite
+data/ats_sources.json
+
+# 파이썬·도구
+__pycache__/
+*.pyc
+.venv/
+.archify/
+.claude/
